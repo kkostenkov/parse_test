@@ -41,15 +41,14 @@ def prepare(connection, db_name, table_name):
         print("Preparing table: ", table_name)
 
         command = (
-        "CREATE TABLE IF NOT EXISTS " + table_name +
-        "(" +
-        " id SERIAL," +
-        " path varchar(150) NOT NULL," +
-        " md5 varchar(32) NOT NULL," +
-        " size_of_file int NOT NULL," +
-        " type_of_file varchar(10) NOT NULL," +
-        " description varchar(150)" +
-        ")"
+            "CREATE TABLE IF NOT EXISTS {0}( \
+            id SERIAL, \
+            path varchar(150) NOT NULL, \
+            md5 varchar(32) NOT NULL, \
+            size_of_file int NOT NULL, \
+            type_of_file varchar(10) NOT NULL, \
+            description varchar(150) \
+            )".format(table_name)
         )
         cursor.execute(command)
         connection.commit()
@@ -71,7 +70,7 @@ def prepare(connection, db_name, table_name):
 def _create_database(cursor, db_name):
     try:
         cursor.execute(
-            "CREATE DATABASE " + db_name + " DEFAULT CHARACTER SET 'utf8'")
+            "CREATE DATABASE {0} DEFAULT CHARACTER SET 'utf8'".format(db_name))
         connection.commit()
     except mysql.connector.Error as err:
         print("Failed creating database: {}\n".format(err))
@@ -79,9 +78,9 @@ def _create_database(cursor, db_name):
 
 def upload_file_info(connection, table_name, file_info):
     cursor = connection.cursor()
-    query = "INSERT INTO " + table_name + \
-    "(path, md5, size_of_file, type_of_file, description)" + \
-    " VALUES(%s,%s,%s,%s,%s)"
+    query = "INSERT INTO {0} \
+            (path, md5, size_of_file, type_of_file, description) \
+            VALUES(%s,%s,%s,%s,%s)".format(table_name)
     args = (file_info["path"], file_info["md5"], file_info["size"], \
         file_info["type"], file_info["description"], )
     cursor.execute(query, args)
@@ -101,21 +100,19 @@ def fetch_next_file(connection, table_name, file_extention):
     All rows in database with same md5 will be updated (description).'''
     cursor = connection.cursor()
     query = (" \
-    SET @max_size = (SELECT MAX(`size_of_file`) FROM `" + table_name + \
-    "` WHERE `type_of_file` = '" + file_extention + \
-    "' AND `description` = '' LIMIT 1); \
-    \
-    SET @max_md5 = (SELECT `md5` FROM `" + table_name + \
-    "` WHERE `size_of_file` = @max_size AND `type_of_file` = '" + \
-    file_extention + "' LIMIT 1); \
-    \
-    UPDATE `" + table_name + "` SET description = 'file is being tested now' \
-    WHERE md5 = @max_md5; \
-    \
-    SELECT path, md5, size_of_file, description FROM `" + table_name  + \
-    "` WHERE md5 = @max_md5 AND `type_of_file` = '" + file_extention + \
-    "' LIMIT 1; \
-    ")
+        SET @max_size = (SELECT MAX(`size_of_file`) FROM `{0}` \
+        WHERE `type_of_file` = '{1}' \
+        AND `description` = '' LIMIT 1); \
+        \
+        SET @max_md5 = (SELECT `md5` FROM `{0}` \
+        WHERE `size_of_file` = @max_size AND `type_of_file` = '{1}' LIMIT 1); \
+        \
+        UPDATE `{0}` SET description = 'file is being tested now' \
+        WHERE md5 = @max_md5; \
+        \
+        SELECT path, md5, size_of_file, description FROM `{0}` \
+        WHERE md5 = @max_md5 AND `type_of_file` = '{1}' LIMIT 1; \
+        ".format(table_name, file_extention))
     file_to_find = {}
     try:
         for result in cursor.execute(query, multi = True):
@@ -141,10 +138,8 @@ def fetch_next_file(connection, table_name, file_extention):
 def report_button(connection, table_name, md5, button_name):
     '''Drive info about found buttonname to database.'''
     cursor = connection.cursor()
-    query = (" \
-    UPDATE `" + table_name + "` SET description = '" + button_name + \
-    "' WHERE md5 = '" + md5 + "'; \
-    ")
+    query = ("UPDATE `{0}` SET description = '{1}' WHERE md5 = '{2}';\
+             ".format(table_name, button_name, md5))
     try:
         cursor.execute(query)
     except mysql.connector.Error as err:
@@ -163,10 +158,8 @@ def get_total_size(connection, table_name, file_extention):
     '''Calculates total size of files with provided extention in bytes.
     File copies are concantenated.'''
     cursor = connection.cursor()
-    query = ("SELECT size_of_file" + \
-    " FROM " + table_name  + \
-    " WHERE type_of_file = " + "'" + file_extention + "'"
-    )
+    query = ("SELECT size_of_file FROM {0} WHERE type_of_file = '{1}'\
+             ".format(table_name, file_extention))
     cursor.execute(query)
     total_size = 0
     for size_of_file in cursor:
@@ -182,11 +175,8 @@ def check_test_completion(connection_data, file_extention):
     table_name = connection_data["table_name"]
     connection = connect(connection_data)
     cursor = connection.cursor()
-    query = ("SELECT id" + \
-    " FROM " + table_name  + \
-    " WHERE type_of_file = " + "'" + file_extention + "'" + \
-    " AND description = ''"
-    )
+    query = ("SELECT id FROM {0} WHERE type_of_file = '{1}' \
+             AND description = ''".format(table_name, file_extention))
     cursor.execute(query)
     untested_files = []
     for file_id in cursor:
