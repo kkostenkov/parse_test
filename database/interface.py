@@ -26,7 +26,7 @@ def connect(connection_data):
         return connection
     except mysql.connector.Error as err:
         if err.errno == 1049: #errorcode.ER_BAD_DB_ERROR:
-            _create_database(cursor, db_name)
+            _create_database(connection.cursor(), db_name)
             connection.database = db_name
             return connection
         else:

@@ -36,18 +36,12 @@ def start_testing(unique_info, test_continues):
     specified extentions."""
     worker_threads = Queue(TESTING_THREADS_ALLOWED)
     print("starting", TESTING_THREADS_ALLOWED, "threads____________________\n")
-
-    timestamp = time.time()
-    time_to_work = 10 #seconds
-
     test_thread_id = 0
     all_files_tested = False
     while not (test_continues.qsize() == 1 and all_files_tested) :
         """ Spawn threads to fetch, test files and update database until
         all files uploaded to DB and tested."""
         if worker_threads.qsize() < TESTING_THREADS_ALLOWED:
-            #print (worker_threads.qsize())
-            #worker_threads.put("token")
             worker_threads.put(test_thread_id)
             worker = threading.Thread(target=tester.tester, \
                                       args=(worker_threads, \
