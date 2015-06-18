@@ -26,7 +26,7 @@ def connect(connection_data):
         return connection
     except mysql.connector.Error as err:
         if err.errno == 1049: #errorcode.ER_BAD_DB_ERROR:
-            _create_database(connection.cursor(), db_name)
+            _create_database(connection, db_name)
             connection.database = db_name
             return connection
         else:
@@ -67,7 +67,8 @@ def prepare(connection, db_name, table_name):
         print("OK\n")
     cursor.close()
 
-def _create_database(cursor, db_name):
+def _create_database(connection, db_name):
+    cursor = connection.cursor()
     try:
         cursor.execute(
             "CREATE DATABASE {0} DEFAULT CHARACTER SET 'utf8'".format(db_name))
@@ -75,6 +76,7 @@ def _create_database(cursor, db_name):
     except mysql.connector.Error as err:
         print("Failed creating database: {}\n".format(err))
         exit(1)
+    finally: cursor.close()
 
 def upload_file_info(connection, table_name, file_info):
     cursor = connection.cursor()
