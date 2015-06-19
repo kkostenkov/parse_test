@@ -6,7 +6,8 @@ from search import cat_search
 from test import tester
 from report import emailer, filemaker
 from settings import CONN_SETTINGS, SEARCHPATH, TESTING_THREADS_ALLOWED, \
-                     EXTENTION_TO_FIND, ALLOWED_APP_RUNTIME, MAIL_SETTINGS
+                     EXTENTION_TO_FIND, ALLOWED_APP_RUNTIME, MAIL_SETTINGS, \
+                     DB_WATCHDOG_TIME
 
 conn_data = CONN_SETTINGS.copy()
 unique_info = []
@@ -35,12 +36,15 @@ def start_testing(unique_info, test_continues):
     Reports first buttons found. Composes list of unique files with
     specified extentions."""
     worker_threads = Queue(TESTING_THREADS_ALLOWED)
-    print("starting", TESTING_THREADS_ALLOWED, "threads____________________\n")
+    print("starting ", TESTING_THREADS_ALLOWED, " threads\n")
     test_thread_id = 0
     all_files_tested = False
-    while not (test_continues.qsize() == 1 and all_files_tested) :
+    while time.time() - db.time_of_update[0] < DB_WATCHDOG_TIME \
+           and (not all_files_tested) :
         """ Spawn threads to fetch, test files and update database until
-        all files uploaded to DB and tested."""
+        all files uploaded to DB and tested or no changes happened to DB
+        for DB_WATCHDOG_TIME seconds."""
+        print(time.time() - db.time_of_update[0])
         if worker_threads.qsize() < TESTING_THREADS_ALLOWED:
             worker_threads.put(test_thread_id)
             worker = threading.Thread(target=tester.tester, \
@@ -72,7 +76,7 @@ threading.Thread(target=start_search, \
 test_continues.put("token")
 threading.Thread(target=start_testing, \
                  args=(unique_info, test_continues)).start()
-print("Main is waiting for 'start_search()' and 'start_testing()' to complete.\n")
+print("Main is waiting for start_search() and start_testing() to complete.\n")
 test_continues.join()
 print("Main thread unlocked. Composing report.\n")
 

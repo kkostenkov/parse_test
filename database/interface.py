@@ -1,6 +1,17 @@
+import time
 import mysql.connector
 from mysql.connector import Error
 from settings import CLEAR_TABLE_BEFORE_WORK
+
+time_of_update = [0,]
+
+def log_last_update(database_update):
+    def wrapped(*args, **kwargs):
+        time_of_update[0] = time.time()
+        #print(database_update)
+        return database_update(*args, **kwargs)
+    return wrapped
+
 
 def connect(connection_data):
     db_ip = connection_data["host"]
@@ -33,6 +44,7 @@ def connect(connection_data):
             print(err)
             return None
 
+@log_last_update
 def prepare(connection, db_name, table_name):
     '''Create database and table.'''
     cursor = connection.cursor()
@@ -67,6 +79,7 @@ def prepare(connection, db_name, table_name):
         print("OK\n")
     cursor.close()
 
+@log_last_update
 def _create_database(connection, db_name):
     cursor = connection.cursor()
     try:
@@ -78,6 +91,7 @@ def _create_database(connection, db_name):
         exit(1)
     finally: cursor.close()
 
+@log_last_update
 def upload_file_info(connection, table_name, file_info):
     cursor = connection.cursor()
     query = "INSERT INTO {0} \
@@ -137,6 +151,7 @@ def fetch_next_file(connection, table_name, file_extention):
     cursor.close()
     return file_to_find
 
+@log_last_update
 def report_button(connection, table_name, md5, button_name):
     '''Drive info about found buttonname to database.'''
     cursor = connection.cursor()
